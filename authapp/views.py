@@ -6,7 +6,8 @@ from rest_framework import status
 from rest_framework import permissions
 from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken,AccessToken
-
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
 
 # Create your views here.
 
@@ -18,17 +19,27 @@ class RegView(APIView):
     Expected JSON:
     {
     "first_name": "firstname",
-    "last_name":"last_name,
+    "last_name":"last_name",
     "username":"username",
     "password":"password",
     "email":"email"
     }
-
-        
     """
-
     permission_classes = [permissions.AllowAny]
 
+    @swagger_auto_schema(
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            required=['first_name', 'last_name', 'username', 'password', 'email'],
+            properties={
+                'first_name': openapi.Schema(type=openapi.TYPE_STRING),
+                'last_name': openapi.Schema(type=openapi.TYPE_STRING),
+                'username': openapi.Schema(type=openapi.TYPE_STRING),
+                'password': openapi.Schema(type=openapi.TYPE_STRING, format='password'),
+                'email': openapi.Schema(type=openapi.TYPE_STRING, format='email'),
+            },
+        )
+    )
     def post(self,request):
         serializer = UserSerializer(data = request.data)
         if serializer.is_valid():
@@ -52,6 +63,16 @@ class LoginView(APIView):
     """
     permission_classes = [permissions.AllowAny]
 
+    @swagger_auto_schema(
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            required=['username', 'password'],
+            properties={
+                'username': openapi.Schema(type=openapi.TYPE_STRING),
+                'password': openapi.Schema(type=openapi.TYPE_STRING, format='password'),
+            },
+        )
+    )
     def post(self,request):
         try:
             username = request.data.get('username') 
@@ -73,7 +94,6 @@ class LoginView(APIView):
             return Response("Something went wrong",status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
 
-
 class ProfileView(APIView):
     """
     get:
@@ -81,7 +101,18 @@ class ProfileView(APIView):
         Returns complete profile of logged in User when Token is added in Bearers section of request.
         Protected route i.e will not work without being logged in.    
     """
-    
+
+    @swagger_auto_schema(
+        manual_parameters=[
+            openapi.Parameter(
+                'Authorization',
+                openapi.IN_HEADER,
+                description="Bearer <access_token>",
+                type=openapi.TYPE_STRING,
+                required=True
+            )
+        ]
+    )
     def get (self,request):
         serializer = UserSerializer(request.user)
         return Response(serializer.data,status=status.HTTP_200_OK)
